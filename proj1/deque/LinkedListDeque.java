@@ -146,7 +146,8 @@ public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
 
     @Override
     public boolean equals(Object o) {
-        if (o instanceof LinkedListDeque x) {
+        if (o instanceof LinkedListDeque) {
+            LinkedListDeque<T> x = (LinkedListDeque<T>) o;
             if (x.size() != size) {
                 return false;
             } else {
