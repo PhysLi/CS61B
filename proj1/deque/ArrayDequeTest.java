@@ -140,43 +140,36 @@ public class ArrayDequeTest {
 
         int N = 1000;
         for (int i = 0; i < N; i += 1) {
-            int operationNumber = StdRandom.uniform(0, 2);
+            int operationNumber = StdRandom.uniform(0, 4);
             if (operationNumber == 0) {
                 // addLast
                 int randVal = StdRandom.uniform(0, 100);
                 lld1.addLast(randVal);
-            } else {
+            } else if (operationNumber == 1) {
                 // size
                 int randVal = StdRandom.uniform(0, 100);
                 lld1.addFirst(randVal);
-            }
-        }
-        for (int i = 0; i < N; i += 1) {
-            int operationNumber = StdRandom.uniform(0, 3);
-            if (operationNumber == 0) {
+            } else if (operationNumber == 2) {
                 // addLast
                 lld1.removeLast();
-            } else if (operationNumber == 1) {
+            } else {
                 // size
                 lld1.removeFirst();
-            } else {
-                for (int j = 0; j < lld1.size(); j++){
-                    lld1.get(j);
-                }
-
             }
         }
     }
 
     @Test
-    public void autoget() {
+    public void equalTest() {
         ArrayDeque<Integer> lld1 = new ArrayDeque<Integer>();
-        lld1.addLast(0);
-        lld1.addFirst(1);
-        lld1.removeLast();
-        lld1.addFirst(3);
-        lld1.addFirst(4);
-        lld1.removeLast();
-        lld1.addLast(6);
+        LinkedListDeque<Integer> lld2 = new LinkedListDeque<Integer>();
+        for (int i = 0; i < 10; i++) {
+            lld1.addLast(i);
+            lld2.addLast(i);
+        }
+        assertTrue(lld1.equals(lld2));
+        assertTrue(lld2.equals(lld1));
+        assertTrue(lld1.equals(lld1));
+        assertTrue(lld2.equals(lld2));
     }
 }

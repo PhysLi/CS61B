@@ -56,7 +56,7 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         T[] newArray = (T[]) new Object[capacity];
         if (getCase()) {
             System.arraycopy(items, getIndex(back + 1), newArray, 0, getBackSize());
-            System.arraycopy(items, 0, newArray, getBackSize(), front);
+            System.arraycopy(items, 0, newArray, getBackSize(), getIndex(front));
         } else {
             System.arraycopy(items, getIndex(back + 1), newArray, 0, size);
         }
@@ -150,17 +150,17 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
 
     @Override
     public boolean equals(Object o) {
-        if (o instanceof ArrayDeque) {
-            ArrayDeque<T> x = (ArrayDeque<T>) o;
+        if (o instanceof Deque) {
+            Deque<T> x = (Deque<T>) o;
             if (x.size() != size) {
                 return false;
             } else {
                 int pos = 0;
                 for (T i : this) {
-                    pos++;
                     if (i != x.get(pos)) {
                         return false;
                     }
+                    pos++;
                 }
                 return true;
             }
