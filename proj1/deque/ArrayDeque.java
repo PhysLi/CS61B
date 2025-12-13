@@ -157,7 +157,7 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
             } else {
                 int pos = 0;
                 for (T i : this) {
-                    if (i != x.get(pos)) {
+                    if (!i.equals(x.get(pos))) {
                         return false;
                     }
                     pos++;
