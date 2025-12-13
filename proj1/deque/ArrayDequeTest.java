@@ -124,6 +124,7 @@ public class ArrayDequeTest {
         ArrayDeque<Integer> lld1 = new ArrayDeque<Integer>();
         for (int i = 0; i < 100; i++) {
             lld1.addLast(i);
+            assertEquals(i,(int) lld1.get(i));
         }
 
         for (double i = 0; i < 50; i++) {
@@ -139,7 +140,7 @@ public class ArrayDequeTest {
 
         int N = 1000;
         for (int i = 0; i < N; i += 1) {
-            int operationNumber = StdRandom.uniform(0, 3);
+            int operationNumber = StdRandom.uniform(0, 2);
             if (operationNumber == 0) {
                 // addLast
                 int randVal = StdRandom.uniform(0, 100);
@@ -154,13 +155,28 @@ public class ArrayDequeTest {
             int operationNumber = StdRandom.uniform(0, 3);
             if (operationNumber == 0) {
                 // addLast
-                int randVal = StdRandom.uniform(0, 100);
                 lld1.removeLast();
-            } else {
+            } else if (operationNumber == 1) {
                 // size
-                int randVal = StdRandom.uniform(0, 100);
                 lld1.removeFirst();
+            } else {
+                for (int j = 0; j < lld1.size(); j++){
+                    lld1.get(j);
+                }
+
             }
         }
+    }
+
+    @Test
+    public void autoget() {
+        ArrayDeque<Integer> lld1 = new ArrayDeque<Integer>();
+        lld1.addLast(0);
+        lld1.addFirst(1);
+        lld1.removeLast();
+        lld1.addFirst(3);
+        lld1.addFirst(4);
+        lld1.removeLast();
+        lld1.addLast(6);
     }
 }

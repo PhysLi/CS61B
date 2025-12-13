@@ -313,17 +313,17 @@ a[1] = new int[2];//不同行的列数可以不同
     items = a;
   }
 
-  public static void addList(int x) {
+  public static void addLast(int x) {
     if (size == item.length) {
       resize(size + 1);
     }
     size++;
-      item[size] = x;
+    item[size] = x;
   }
   ```
   这样的实现会使在容量超过后每次`addLast()`都会变得更慢（因为每次`resize()`都需要重新创建一个大数组。解决方案是
   ```java
-  if (size == item.length) {
+    if (size == item.length) {
       resize(2 * size);
     }
   ```
