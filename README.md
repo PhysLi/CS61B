@@ -641,4 +641,100 @@ a[1] = new int[2];//不同行的列数可以不同
   - 典型地，package name是写代码的机构的网络地址的倒序，如`org.junit`存储在junit.org中。
   - 当创建一个package时，需要通过在文件的第一行指定package名来说明该文件是该package的一部分：`package <package-name>`。
   - package的好处在于可以使得即使两个类的类名相同，但其canonical name必不相同，在使用时不会混淆。
-  
+
+
+## Lecture 12: Asymptotics
+- 程序的运行效率：时间复杂度
+  - 关心程序的每一行（每一个函数）被调用的次数随输入规模 $N$的关系，看 $N$的阶数($N\rightarrow +\infty$，且只需要看最高阶的无穷大是哪一阶)
+  - $N,N\log N$是好的时间复杂度，再高阶在大规模时会很耗时。
+  - 计算时间复杂度时只要考虑最坏情况（有时会提前返回，但不考虑这种情况）、忽略低阶无穷小、忽略系数、假设调用每个函数的时间相等
+  - 即时间复杂度看的是整个算法中所有的调用个数是哪一阶的无穷大。
+  - 简化的考虑方法是把所有需要恒定时间的步骤（不依赖于规模）看作单步操作。
+  - $\Theta$定义：设 $R(N)$是一个函数，若 $R(N)\in [k_1f(N),k_2f(N)]$，记为 $R(N)\in \Theta(f(N))$（夹逼定理得到的同阶无穷小）。时间复杂度定义为作为 $N$的函数的runtime。若只知道上界，则记为 $O(f(N))$，若只知道下界，则记为 $\Omega(f(N))$
+- 对于Lecture 7中的ArrayList，在进行添加操作时需要`resize`数组。此时应该考虑均摊的运行时间(amortized runtime)，若每次resize大小加1，则`addLast`的均摊运行时间为 $\Theta(N^2)$，而若每次resize大小乘2，则均摊运行时间为 $\Theta(N)$。
+- MergeSort排序法：递归排序，把无序列表分为两半，分别排序，再merge；其中merge采用两边走指针法，时间复杂度为 $\Theta(n)$；于是总的时间复杂度为 $\Theta(N\log N)$
+
+## Lecture 14: Disjoint Sets（不相交集合，并查集）
+- Disjoint set数据类型有两个操作：`connect(x, y)`,`isConnected(x, y)`，分别连接两个元素以及判断两个元素是否相连（连接具有传递性）
+- 需要关心如何实现这两个方法，来让set中元素数很多时操作也很快
+  - 可以记录所有edge（很慢）
+  - 由于连接具有传递性，本质上相连的任意两个元素之间都有edge，即相连的元素属于同一等价类。据此可以将set里的元素分成一系列disjoint的subsets
+  - ListOfSetsDS：可以将并查集实现为一个set的list，但会很慢：如果没有任何连接，则需要把所有set遍历来判断两个元素是否在同一个set中，$\Theta(N)$
+  - QuickFindDS：可以为实现为一个数组，每个位置代表一个元素，存储其所属的集合编号，`isConnect`为$\Theta(1)$（事实上是用数组的下标代表元素），但`connect`需要同时改变其中一个集合中所有元素的集合编号，需要查询这个集合包含哪些元素，$\Theta(N)$
+  - QuickUnionDS：给每个元素分配一个父项（通过两个元素之间的连接关系），于是可以在数组的每个项中存储其父项的编号。此时`connect`实现为更改这个元素所属树的根节点的父项为另一个树的根节点（$\Theta(N)$），`isConnect`实现为看两个元素是否属于同一棵树（可以追溯到同一个父项）（$\Theta(N)$）
+  - WeightedQuickUnionDS：QuickUnionDS的时间复杂度来源于当树很高时爬树的时间开销。于是我们需要控制树高，即在连接时选择把较小的树链接到较大的树上；这样就需要记录每棵树的大小
+    - $2N$个元素的最差树是由一个 $N$元素最差树的根节点挂在另一个$N$元素最差树的根节点上，其时间复杂度为 $\Theta(\log N)$
+    - 在根节点处以负数来记录，注意记录的是节点数而非最长的分支的长度，因为计算高度的逻辑比较难编写
+  - WQU with Path Compression：QuickUnion要求树越短越好，即最好每个集合中所有元素都直接挂在根节点上，所以可以在每次`isConnect`爬树的时候把沿途遇到的节点改挂到根节点上，称为路径压缩
+    - 可能会想，这样是不是和QuickFind没有区别了，QuickFind中在`connect`时需要更改集合中每个元素，而路径压缩在`isConnect`时需要更改路径上每个元素，但point在于路径压缩在worst case中的时间复杂度也不会是 $\Theta(N)$
+
+## Lecture 16: Abstract Data Types(ADTs) & Binary Searching Trees(BST，二叉搜索树)
+### ADT
+- 抽象的数据类型，类似于interface，只关于可以做什么，而不管如何实现（如各种List和各种DisjointSet）
+  - 标准库中有 `Collection` Interface，而 `List`, `Set`和 `Map`（键值对）都是从它之上extend出来的。
+
+### BST
+- 是为了构造`Set`和`Map`（即不重复的数据集合）
+- 首先考虑一个OrderedLinkedList数据类型，naively提取和添加元素的时间复杂度都为 $\Theta(N)$
+  - 优化提取元素的时间复杂度，可以利用已经排序的事实，进行二分搜索，时间复杂度变为 $\Theta(\log N)$。若想要二分搜索，就需要让sentinial指向中间的元素，中间的元素指向两个1/4的元素，以此类推，递归形成BST![alt text](note_img/BST.png)
+- Tree的定义：由node和edge构成，任意两节点之间只有一条路径
+  - Rooted tree: 选择一个节点称作root，于是root之外的每一个节点都有一个parent（定义为从该节点到root之间的path上的第一个节点）；若某个节点不是任何节点的parent，则称为leaf。
+  - rooted binary tree: 每个节点至多有2个子节点。
+- BST：BST定义为具有BST性质的rooted binary tree。其中BST性质定义为对于任意节点，其左subtree的任意节点都比该节点小，右subtree的任意节点都比该节点大（所以不能有两个节点具有重复的key）
+- BST Interface
+  - 需要有`contain()`方法，直接使用二分搜索即可
+  - `insert()`方法：和`contain()`类似，先查找再插入（作为寻找的末尾节点的子节点），可以递归实现
+    ```java
+    static BST insert(BST T, Key ik) {
+      if (T == null) {
+        return new BST(ik);
+      } else if (ik < T.key) {
+        T.left = insert(T.left, ik);
+      } else if (ik > T.key) {
+        T.right = insert(T.right, ik);
+      }
+      return T
+    }
+    ```
+  - Hibbard deletion: 删除节点可以分为删除具有0,1,2个子节点的节点三种情况
+    - 0个子节点：直接删除
+    - 1个子节点：把子节点挂到自己的位置
+    - 2个子节点：可以把左子树的最右leaf或右子树的最左节点挂到自己的位置（这两种节点都最多有1个子节点），然后删除这个最右或最左节点（回到第2种情况）
+- 用BST构造`set`：节点的key代表元素；构造`map`：在节点上既存储key又存储value
+
+## Lecture 17: B-trees
+- 若每个节点都有0个或2个子节点，则称为bushy tree。对于bushy tree，`contain()`的时间复杂度为 $\Theta(\log N)$；若每个节点都有0个或1个子节点，则是BST的worst case，时间复杂度为 $\Theta(N)$。
+- 按照以上定义的`insert()`方法，从空树出发只有严格按照树的生长来Insert才能得到bushy tree，若按顺序insert只能得到worst case。有结论：随机插入也能得到bushy tree（但不总是能随机插入）
+- 避免不平衡树的方法(B tree)：给定一个已经存在的bushy tree，不能增加新leaf，而是将新leaf存在旧leaf的节点中（所以tree的height不会再增加）；但若leaf变得太大，也会使搜索变慢，所以需要给每个leaf一个长度限制；若超出长度时，则把leaf的中间靠左的元素移动到其父节点中，然后将leaf被移动上去的元素左侧的元素分裂出来形成新的leaf。此时父节点有三个子节点：左（小于父节点元素）中（在父节点两个元素之间）右（大于父节点元素）。当root超出长度时，移动中间靠左的元素使其称为新的根节点。
+  - 最大长度限制为3的B-tree也称为2-3-4 tree或2-4 tree（允许的子节点数目）
+  - 最大长度限制为2的B-tree也称为2-3 tree
+
+![alt text](note_img/B-tree.png)![alt text](note_img/B-tree-more.png)
+- B tree的两个不变量：
+  1. 所有的leaf都有相同的深度
+  2. 若一个节点有k个元素，则其必须有k+1个子节点
+- worst case performance：
+  - 最好情况：每个节点都填满（L个）且有满子节点（L+1个），深度为 $\log_{L+1}N$，搜索时间复杂度为 $L\log_{L+1}N$
+  - 最坏情况：满BST，只有一个节点有两个元素，深度为 $\log_2 (N-1)$，搜索时间复杂度为 $\log_2 (N-1)+1$
+- B tree的特点
+  1. 始终是平衡的
+  2. 添加一个元素时永远是先和已有元素挤在同一个node中，如果overfull再分裂
+
+## Lecture 18: Red Black Tree
+### Tree Rotation
+- 同样的 $N$个节点构成的BST可以有多种不同的结构，不同的结构之前可以通过旋转来相互转换。对于某个节点 `S`，可以定义左旋`LeftRotate(S)`和右旋`RightRotate(S)`。对于左旋，需要先将节点 `S`和其右侧的节点合并（此时成为一个2-3 tree），再将 `S`节点“发射到左下方”，并正确安排2-3tree的三个子节点；对于右旋，需要先将节点`S`和其左侧的节点合并称为一个2-3tree，再将 `S`节点“发射到右下方”。
+- 平衡一个`N`元素的BST的时间复杂度（worst）是 $O(N)$。
+![alt text](./note_img/tree-rotation.png)
+## Left Leaning Red Black Tree(LLRB)
+- 上述旋转方法是先任意添加元素，再通过旋转使其平衡。更好的做法是在每一步添加时都使其平衡。
+### LLRB
+- LLRB定义为和2-3 tree一一对应的一种BST，它的构造方式是：把2-3tree的有2个元素的node中的两个元素分裂开（永远采取将左侧的元素向左下发射的分裂方式，于是left-leaning），用red edge连接（一般的edge是黑色的）![alt text](./note_img/LLRB.png)
+- 2-3 tree构造比较复杂，通过这样的一一对应，我们无需构造复杂的B tree，又能得到完全平衡的BST。事实上LLRB的高度最多为其对应的2-3 tree的2倍左右，于是保持了`contain()`方法的$O(\log N)$复杂度
+
+### 通过旋转来保持BST是LLRB
+- 若先构造2-3 tree再将其变为LLRB，则仍需构造复杂的2-3 tree。我们想要只构造一般的BST，只是在每次`add()`时都通过旋转使得BST保持为LLRB。旋转规则如下：
+  1. 插入新元素时：由于2-3 tree插入新元素时总是先放入已有的node中而非增加新leaf，所以LLRB插入新元素时总是使用red edge。
+  2. 若add元素创建的red edge是right leaning的，则需要通过把该edge的上节点left rotate来恢复；
+  3. 连续两次向左添加red edge会导致没有对应的2-3 tree，此时需要把父节点向右旋转。 
+  4. 若某个节点下有两个red edge（一个left leaning一个right leaning），对应的是2-3 tree的节点overfull的情况，此时需要分裂节点，即把这个父节点连接的3个edge颜色反转即可。![alt text](./note_img/LLRB-rotation.png)
+- 需要注意：一次修复（旋转或反色操作）可能有副作用使得其它地方不满足LLRB要求。

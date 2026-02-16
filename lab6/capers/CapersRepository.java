@@ -1,6 +1,9 @@
 package capers;
 
+import java.io.Console;
 import java.io.File;
+import java.io.IOException;
+
 import static capers.Utils.*;
 
 /** A repository for Capers 
@@ -18,9 +21,9 @@ public class CapersRepository {
     static final File CWD = new File(System.getProperty("user.dir"));
 
     /** Main metadata folder. */
-    static final File CAPERS_FOLDER = null; // TODO Hint: look at the `join`
+    static final File CAPERS_FOLDER = join(CWD, ".capers"); // TODO Hint: look at the `join`
                                             //      function in Utils
-
+    static final File STORY_FILE = join(CAPERS_FOLDER, "story.txt");
     /**
      * Does required filesystem operations to allow for persistence.
      * (creates any necessary folders or files)
@@ -32,6 +35,14 @@ public class CapersRepository {
      */
     public static void setupPersistence() {
         // TODO
+        CWD.mkdir();
+        CAPERS_FOLDER.mkdir();
+        Dog.DOG_FOLDER.mkdir();
+        try {
+            STORY_FILE.createNewFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -41,6 +52,11 @@ public class CapersRepository {
      */
     public static void writeStory(String text) {
         // TODO
+        if (!STORY_FILE.exists()) {
+            System.out.println("story file doesn't exist");
+        }
+        writeContents(STORY_FILE, readContentsAsString(STORY_FILE) + text + "\n");
+        System.out.print(readContentsAsString(STORY_FILE));
     }
 
     /**
@@ -50,6 +66,9 @@ public class CapersRepository {
      */
     public static void makeDog(String name, String breed, int age) {
         // TODO
+        Dog newDog = new Dog(name, breed, age);
+        newDog.saveDog();
+        System.out.println(newDog.toString());
     }
 
     /**
@@ -60,5 +79,8 @@ public class CapersRepository {
      */
     public static void celebrateBirthday(String name) {
         // TODO
+        Dog readDog = Dog.fromFile(name);
+        readDog.haveBirthday();
+        readDog.saveDog();
     }
 }
