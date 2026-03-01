@@ -3,17 +3,15 @@ package bstmap;
 import java.util.Iterator;
 import java.util.Set;
 
-public class BSTMap<K extends Comparable, V> implements Map61B<K, V>{
-    private class BSTNode<K, V> {
+public class BSTMap<K extends Comparable<K>, V> implements Map61B<K, V>{
+    private class BSTNode {
         public K Key;
         public V Value;
-        public BSTNode<K, V> LeftNode, RightNode;
+        public BSTNode LeftNode, RightNode;
 
         public BSTNode(K key, V value) {
             this.Key = key;
             this.Value = value;
-            LeftNode = null;
-            RightNode = null;
         }
 
         public void printNode() {
@@ -21,7 +19,7 @@ public class BSTMap<K extends Comparable, V> implements Map61B<K, V>{
         }
     }
 
-    private BSTNode<K, V> Root;
+    private BSTNode Root;
 
     public BSTMap() {
         Root = null;
@@ -32,13 +30,12 @@ public class BSTMap<K extends Comparable, V> implements Map61B<K, V>{
         Root = null;
     }
 
-    private BSTNode<K, V> getEndNode(BSTNode<K, V> node, K key) {
+    private BSTNode getEndNode(BSTNode node, K key) {
         if (node == null) {
-            node = new BSTNode<>(null, null);
+            return null;
+        } else if (node.Key.compareTo(key) == 0) {
             return node;
-        } else if (node.Key == key) {
-            return node;
-        } else if (node.Key.compareTo(key) < 0) {
+        } else if (node.Key.compareTo(key) > 0) {
             return getEndNode(node.LeftNode, key);
         } else {
             return getEndNode(node.RightNode, key);
@@ -47,12 +44,12 @@ public class BSTMap<K extends Comparable, V> implements Map61B<K, V>{
 
     @Override
     public boolean containsKey(K key) {
-        return getEndNode(Root, key) != null;
+        return getEndNode(this.Root, key) != null;
     }
 
     @Override
     public V get(K key) {
-        BSTNode<K, V> endNode = getEndNode(this.Root, key);
+        BSTNode endNode = getEndNode(this.Root, key);
         if (endNode == null) {
             return null;
         } else {
@@ -60,7 +57,7 @@ public class BSTMap<K extends Comparable, V> implements Map61B<K, V>{
         }
     }
 
-    private int sizeof(BSTNode<K, V> node) {
+    private int sizeof(BSTNode node) {
         if (node == null) {
             return 0;
         } else {
@@ -73,38 +70,54 @@ public class BSTMap<K extends Comparable, V> implements Map61B<K, V>{
         return sizeof(Root);
     }
 
+    private BSTNode putEndNode(BSTNode node, K key, V value) {
+        if (node == null) {
+            return new BSTNode(key, value);
+        }
+
+        // 2. 比较并递归
+        int cmp = key.compareTo(node.Key);
+        if (cmp < 0) {
+            // key 小于当前节点，插入到左边，并更新左子树的引用
+            node.LeftNode = putEndNode(node.LeftNode, key, value);
+        } else if (cmp > 0) {
+            // key 大于当前节点，插入到右边，并更新右子树的引用
+            node.RightNode = putEndNode(node.RightNode, key, value);
+        } else {
+            // 3. Key 已存在，更新 Value
+            node.Value = value;
+        }
+
+        // 4. 返回当前节点，保持树的结构连接
+        return node;
+    }
 
     @Override
     public void put(K key, V value) {
-        BSTNode<K, V> endNode = getEndNode(Root, key);
-        if (endNode == null) {
-            endNode = new BSTNode<K, V>(key, value);
-        } else {
-            endNode.Value = value;
-        }
+        Root = putEndNode(Root, key, value);
     }
 
     @Override
     public Set<K> keySet() {
-        return Set.of();
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public V remove(K key) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public V remove(K key, V value) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Iterator<K> iterator() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
-    private void printInOrder(BSTNode<K, V> node) {
+    private void printInOrder(BSTNode node) {
         if (node == null) {
             return;
         }
