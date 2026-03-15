@@ -725,16 +725,43 @@ a[1] = new int[2];//不同行的列数可以不同
 - 同样的 $N$个节点构成的BST可以有多种不同的结构，不同的结构之前可以通过旋转来相互转换。对于某个节点 `S`，可以定义左旋`LeftRotate(S)`和右旋`RightRotate(S)`。对于左旋，需要先将节点 `S`和其右侧的节点合并（此时成为一个2-3 tree），再将 `S`节点“发射到左下方”，并正确安排2-3tree的三个子节点；对于右旋，需要先将节点`S`和其左侧的节点合并称为一个2-3tree，再将 `S`节点“发射到右下方”。
 - 平衡一个`N`元素的BST的时间复杂度（worst）是 $O(N)$。
 ![alt text](./note_img/tree-rotation.png)
-## Left Leaning Red Black Tree(LLRB)
+### Left Leaning Red Black Tree(LLRB)
 - 上述旋转方法是先任意添加元素，再通过旋转使其平衡。更好的做法是在每一步添加时都使其平衡。
-### LLRB
+#### LLRB
 - LLRB定义为和2-3 tree一一对应的一种BST，它的构造方式是：把2-3tree的有2个元素的node中的两个元素分裂开（永远采取将左侧的元素向左下发射的分裂方式，于是left-leaning），用red edge连接（一般的edge是黑色的）![alt text](./note_img/LLRB.png)
 - 2-3 tree构造比较复杂，通过这样的一一对应，我们无需构造复杂的B tree，又能得到完全平衡的BST。事实上LLRB的高度最多为其对应的2-3 tree的2倍左右，于是保持了`contain()`方法的$O(\log N)$复杂度
 
-### 通过旋转来保持BST是LLRB
+#### 通过旋转来保持BST是LLRB
 - 若先构造2-3 tree再将其变为LLRB，则仍需构造复杂的2-3 tree。我们想要只构造一般的BST，只是在每次`add()`时都通过旋转使得BST保持为LLRB。旋转规则如下：
   1. 插入新元素时：由于2-3 tree插入新元素时总是先放入已有的node中而非增加新leaf，所以LLRB插入新元素时总是使用red edge。
   2. 若add元素创建的red edge是right leaning的，则需要通过把该edge的上节点left rotate来恢复；
   3. 连续两次向左添加red edge会导致没有对应的2-3 tree，此时需要把父节点向右旋转。 
   4. 若某个节点下有两个red edge（一个left leaning一个right leaning），对应的是2-3 tree的节点overfull的情况，此时需要分裂节点，即把这个父节点连接的3个edge颜色反转即可。![alt text](./note_img/LLRB-rotation.png)
 - 需要注意：一次修复（旋转或反色操作）可能有副作用使得其它地方不满足LLRB要求。
+
+## Lecture 19: Hashing
+### motivation
+- 至今最好的实现Set或Map的方式是LLRB，插入和查找的时间复杂度为 $\Theta(\log N)$，我们希望进一步优化。
+- LLRB需要其中的元素是可以比较大小的，否则无法实现
+### Hash table
+- BST的思想是对元素进行排序，而Hash的思想是对元素进行分类。
+- 考虑只包含整数的集合，可以按照整数的最后一位对其进行分类来加快查找，但有两个问题
+  - 对于一般的非整数元素如何分类
+  - 如果某一类中元素过多（分类并不随机）怎么办
+  - 若给每一类预先分配相同的空间，若有些类没有填满则会导致空间浪费
+  - 若分的bin数是固定的，那么和不分类的时间复杂度只差一个常数因子，没有用
+- 以上问题的解决方法为
+  - Reduction function：对整数使用取模的方法来分类，模数即为分的类数；一般而言若模数是质数，则可以得到随机的分类。
+  - 可以不给每一类预先分配相同空间，而是用链表实现每一个bin，从而动态分配空间
+  - 让分的bin个数 $M$ 随着总元素个数 $N$ 的增长而增长，需要保证 $M$ 始终至多只和 $N$相差一个常数因子：在bin的平均大小超过 $k$时增加 $M$（进行翻倍，类比ArrayList）。这样我们的所有操作在平均意义上都是 $\Theta(1)$的时间复杂度
+  - 通过编码的方式来存储非整数对象
+    - 因为我们不应该为每一种对象单独指定一种分类和resize的方式，所以集合只关心整数，而通过编码的方法把任意元素变成整数
+    - base26编码把认为英文字符串是一个26进制string，将其转换为10进制即得到整数。
+    - ASCII, unicode...
+- 把所有元素都编码为整数，再取模进行分类的过程称为Hash function。问题在于：计算机能够存储的整数是有上下限的，所以需要将整数首先通过取模reduce到可以表示的整数区间。这样会导致重复表示，但概率较低，可以忽略。reduce后的整数称为hash code。
+
+### Equality
+- 每写一个新类时要override hashcode function，因为若这个新类有特别的相等关系（equals function），而默认的hashcode只是返回内存值，无法和equals function自洽。所以若两个对象是相等的，hashcode function的实现需要让它们具有相同的hashcode
+
+### Mutability
+- 若hash table需要使用对象作为key，则这个对象不能是mutable的。
