@@ -1,6 +1,8 @@
 package gitlet;
 
 import java.io.File;
+import java.util.Map;
+
 import static gitlet.Utils.*;
 
 // TODO: any imports you need here
@@ -24,6 +26,26 @@ public class Repository {
     public static final File CWD = new File(System.getProperty("user.dir"));
     /** The .gitlet directory. */
     public static final File GITLET_DIR = join(CWD, ".gitlet");
+    public static final File COMMITS_DIR = join(CWD, "commits");
+    public static final File BLOBS_DIR = join(CWD, "blobs");
+    public static final File STAGED_DIR = join(CWD, "staged");
 
+    private static Map<String, String> branchHeaders;
+    private static String head;
     /* TODO: fill in the rest of this class. */
+
+    public void initialize() {
+        if (CWD.exists()) {
+            throw error("A Gitlet version-control system already exists in the current directory.");
+        }
+        CWD.mkdir();
+        GITLET_DIR.mkdir();
+        COMMITS_DIR.mkdir();
+        BLOBS_DIR.mkdir();
+        STAGED_DIR.mkdir();
+
+        Commit masterInit = new Commit();
+        branchHeaders.put("masterInit", masterInit.sha1);
+        head = masterInit.sha1;
+    }
 }

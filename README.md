@@ -765,3 +765,41 @@ a[1] = new int[2];//不同行的列数可以不同
 
 ### Mutability
 - 若hash table需要使用对象作为key，则这个对象不能是mutable的。
+
+
+## Lecture 21: Heaps and Priority Queues
+- PQ需要三个api：`add()`,`getSmallest()`,`removeSmallest()`；只能获取最小的元素
+  - 假设有很多数据不断产生，而我们只想要跟踪最大的 $N$个元素，那么全部存储会浪费空间，使用PQ更为合适
+- PQ区别于集合的一个特性在于可以有重复的元素
+### Heap（堆）
+- BST需要保持bushy，且无法处理重复元素，引入二叉最小堆(binary min-heap)
+- BMH是complete binary tree（每个节点都有两个子节点的二叉树，leaf层可以只有一个子节点，且缺失的节点强制为右节点），且需要满足min-heap属性（即每个节点的值都需要$\leq$ 其两个字节点的值）
+- BMH可以用来使PQ的实现更快
+  - `getSmallest()`只需返回root node
+  - `add()`：需要同时满足complete和min-heap属性，很难完成；所以选择首先保证一个属性进行add，add后再fix另一个。选择首先保留complete：先把所有leaf推到最左边，再把新元素add到leaf的第一个空位上；再不断将该节点和其父节点进行交换来fix min-heap条件（由于是沿着枝条操作的，必然是$\Theta(\log N)$时间复杂度
+  - `removeSmallest()`：把堆中的最后一个元素（最右端的leaf）放在root上（选择它而不选择root的子节点是因为选择leaf对树的影响最小），再将其和较小的子节点交换来fix min-heap条件
+- Tree的Java实现
+  - 递归数据结构：`Tree`类需要存储其值以及所有子树（存储在一个Tree数组中）。
+    - 或者存储一个`faveredChild`，让该子节点存储其另一个兄弟节点（即把树的同一层作为一个链表，父节点只存储链表头）
+  - 数组实现：需要一个存储`key`的数组和一个存储每个节点的父节点的数组。元素的序号代表节点的编号。对于complete binary map，父节点数组的结构是确定的，所以可以不存储（即只用一个数组，按照1,2,4,8...的顺序逐层存储节点）![alt text](note_img/ArrayTree.png)
+- 所以BMH实现的PQ相对于BST的改进在于`getSmallest()`变为$\Theta(1)$。
+
+## Lecture 22: Graphs and Traversals
+### Traversal
+- Tree的遍历称为tree traversal，有很多可能的顺序
+  - level order: 从上到下从左到右
+  - Depth-first
+    - preorder: visit当前节点，递归调用左子节点，递归调用右子节点
+    - inorder: 递归调用左子节点，visit当前节点，递归调用右子节点
+    - postorder: 递归调用左子节点，递归调用右子节点，visit当前节点
+    - 判断visit顺序的方法：围绕tree的图逆时针画圈，preorder表示当画圈经过node左侧时访问，inorder表示当画圈经过node底部时访问，postorder表示当画圈经过node右侧时访问![alt text](note_img/depth-first.png)
+### graphs
+- tree只能表达从属关系（任意两个节点之间只有一个路径）；若取消上述限制，则得到graph
+- simple graph: 两个节点之间最多只能有一个edge；不能有自己到自己的edge
+- 分类：directed/undirected（有向图/无向图）；循环图/非循环图；edge可以由key
+- s-t connectivity problem：判断是否存在从s到t的路径，需要进行graph traversal。
+  - 递归遍历：递归到每个子节点是否能连接到终点
+    - 会有无限循环的问题：因为两个节点互为子节点，且图中可能存在循环；所以需要对已经被询问过（已经走过的路线上）的子节点进行标记
+    - 称为Depth-first search：因为会先遍历完整个子图，再遍历其它子图
+
+## Lecture 23: BFS, DFS and implementations
