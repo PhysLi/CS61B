@@ -3,6 +3,7 @@ package gitlet;
 // TODO: any imports you need here
 
 import java.util.Date; // TODO: You'll likely use this in this class
+import java.util.List;
 import java.util.Map;
 
 /** Represents a gitlet commit object.
@@ -23,8 +24,7 @@ public class Commit {
     /** The message of this Commit. */
     private String message;
     private long timeStamp;
-    public String sha1;
-    private Map<String, String> fileBlobs;
+    public List<String> fileBlobs;
     private String[] parentCommits;
     /* TODO: fill in the rest of this class. */
 }

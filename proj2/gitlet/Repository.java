@@ -1,6 +1,10 @@
 package gitlet;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static gitlet.Utils.*;
@@ -23,29 +27,72 @@ public class Repository {
      */
 
     /** The current working directory. */
-    public static final File CWD = new File(System.getProperty("user.dir"));
+    private static final File CWD = new File(System.getProperty("user.dir"));
     /** The .gitlet directory. */
-    public static final File GITLET_DIR = join(CWD, ".gitlet");
-    public static final File COMMITS_DIR = join(CWD, "commits");
-    public static final File BLOBS_DIR = join(CWD, "blobs");
-    public static final File STAGED_DIR = join(CWD, "staged");
-
-    private static Map<String, String> branchHeaders;
-    private static String head;
+    private static final File GITLET_DIR = join(CWD, ".gitlet");
+    private static final File COMMITS_DIR = join(CWD, "commits");
+    private static final File BLOBS_DIR = join(CWD, "blobs");
+    private static final File STAGED_DIR = join(CWD, "staged");
+    private static RepoConfig config;
     /* TODO: fill in the rest of this class. */
 
-    public void initialize() {
-        if (CWD.exists()) {
+    private static class RepoConfig implements Serializable {
+        public Map<String, Commit> branchHeaders;
+        public Commit head;
+    }
+
+    public static void initialize() throws IOException {
+        if (GITLET_DIR.exists()) {
             throw error("A Gitlet version-control system already exists in the current directory.");
         }
-        CWD.mkdir();
+
         GITLET_DIR.mkdir();
         COMMITS_DIR.mkdir();
         BLOBS_DIR.mkdir();
         STAGED_DIR.mkdir();
 
-        Commit masterInit = new Commit();
-        branchHeaders.put("masterInit", masterInit.sha1);
-        head = masterInit.sha1;
+        RepoConfig configObj = new RepoConfig();
+        Commit initial = commit("initial commit.");
+        Map<String, Commit> branchHeaders = new HashMap<>();
+        branchHeaders.put("masterInit", initial);
+
+        configObj.branchHeaders = branchHeaders;
+        configObj.head = initial;
+
+        File repoConfig = join(GITLET_DIR, "config");
+        writeContents(repoConfig, configObj);
+        repoConfig.createNewFile();
+    }
+
+    public static void loadConfig() {
+        File configFile = join(GITLET_DIR, "config");
+        if (configFile.exists()) {
+            config = readObject(configFile, RepoConfig.class);
+        }
+    }
+
+    public static void add(String fileName) throws IOException {
+        File file = join(CWD, fileName);
+        Blob blob = new Blob(fileName, readContentsAsString(file));
+        String hash = sha1(blob);
+
+        File stagedBlob = join(STAGED_DIR, hash);
+        List<String> filesInHead = config.head.fileBlobs;
+
+        if (stagedBlob.exists()) {
+            stagedBlob.delete();
+        }
+        if (!filesInHead.contains(hash)) {
+            stagedBlob.createNewFile();
+        }
+
+    }
+
+    public static Commit commit(String message) {
+        return new Commit();
+    }
+
+    public static void remove(String filename) {
+
     }
 }

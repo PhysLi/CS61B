@@ -45,8 +45,26 @@
 ## Algorithms
 
 ----
-
+最大的问题是文件副本如何表示，如何判断两个副本是不同的副本。
+blobs和commits都由hashcode标识，若两个blobs内容相同，则有相同的hashcode；若两个commit的各个属性都相同，则有相同的hashcode，称为content addressable。如何实现content addressable？使用SHA1方法。
+需要实现的命令包括：
+1. `init`: 创建文件夹以及创建initial commit（属于`master`分支）
+2. `add`: 一次只能`add`一个文件，复制文件放入`staged`文件夹（以什么方式复制？直接复制，还是读取、serialization后复制？）若文件和当前commit相同则从`staged`中移除。
+   - 分为：当前内容和head commit中相同/不同；该文件当前在staged/不在
+3. `commit`: 默认情况下一个commit中文件应该和parent commit完全相同，除非该文件当前在`staged`中（parent commit和staged中的文件称为tracked，其它改动都是untracked，不会被commit）。`commit`后清空`staged`。
+   - `commit`后把`staged`中的文件转移到`blobs`中
+   - blobs content addressable，且可以保存整个文件的拷贝。
+4. `rm`: 旨在untrack一个file。若该file位于staged，则unstage即可；若该file位于parent commit，则在stage中表明将其删除，并真的删掉这个文件。
+5. `log`: 输出commit tree。使用`java.util.Date`和`java.util.Formatter`
 ## Persistence
 
 ----
+文件结构为
+```
+CWD
+└──.gitlet
+    ├──commits
+    ├──blobs
+    └──staged
+```
 
