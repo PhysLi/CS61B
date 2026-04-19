@@ -45,6 +45,12 @@
 ## Algorithms
 
 ----
+维护几个map：
+1. `head` commit中有一个`Map<String, String> fileBlobs`（是否可以改成`Map<String, File>`?）
+2. `config`中有一个`Map<String, String> stagedForAdd`
+
+
+
 最大的问题是文件副本如何表示，如何判断两个副本是不同的副本。
 blobs和commits都由hashcode标识，若两个blobs内容相同，则有相同的hashcode；若两个commit的各个属性都相同，则有相同的hashcode，称为content addressable。如何实现content addressable？使用SHA1方法。
 需要实现的命令包括：
