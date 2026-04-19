@@ -1,7 +1,5 @@
 package gitlet;
 
-import net.sf.saxon.trans.SymbolicName;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
@@ -65,7 +63,8 @@ public class Repository {
         STAGED_DIR.mkdir();
 
         config = new RepoConfig();
-        commit("initial commit");
+        Commit initCommit = commit("initial commit");
+        config.branchHeaders.put("master", initCommit);
         saveConfig();
     }
 
@@ -138,16 +137,13 @@ public class Repository {
             for (String filename : config.stagedForRM) {
                 newCommit.fileBlobs.remove(filename);
             }
-            config.stagedForRM.clear();
 
             for (String filename : config.stagedForAdd.keySet()) {
                 String hash = config.stagedForAdd.get(filename);
                 newCommit.fileBlobs.put(filename, hash);
                 File fileBlob = join(BLOBS_DIR, hash);
-                File fileStaged = join(STAGED_DIR, hash);
-                writeObject(fileBlob, readObject(fileStaged, Blob.class));
+                writeObject(fileBlob, readObject(join(STAGED_DIR, hash), Blob.class));
                 fileBlob.createNewFile();
-                fileStaged.delete();
             }
         }
 
@@ -156,7 +152,8 @@ public class Repository {
         writeObject(commitFile, newCommit);
 
         config.head = newCommit;
-        saveConfig();
+        config.branchHeaders.put(config.currentBranch, newCommit);
+        clearStaged();
         return newCommit;
     }
 
@@ -169,13 +166,20 @@ public class Repository {
         }
     }
 
+    private static Commit[] listAllCommits() {
+        List<String> allCommitsHash = plainFilenamesIn(COMMITS_DIR);
+        Commit[] allCommits = new Commit[allCommitsHash.toArray().length];
+        int i = 0;
+        for (String hash : allCommitsHash) {
+            allCommits[i] = readObject(join(COMMITS_DIR, hash), Commit.class);
+            i++;
+        }
+        return allCommits;
+    }
     public static void globalLog() {
-        List<String> allCommits = plainFilenamesIn(COMMITS_DIR);
-        if (allCommits != null) {
-            for (String hash : allCommits) {
-                Commit current = readObject(join(COMMITS_DIR, hash), Commit.class);
-                current.printCommit();
-            }
+        Commit[] allCommits = listAllCommits();
+        for (int i = 0; i < allCommits.length; i++) {
+            allCommits[i].printCommit();
         }
     }
 
@@ -193,14 +197,112 @@ public class Repository {
             System.out.println(stagedAdd);
         }
 
-        System.out.println("\n===Removed Files===");
+        System.out.println("\n=== Removed Files ===");
         for (String stagedRM : config.stagedForRM) {
             System.out.println(stagedRM);
         }
 
         System.out.println("\n=== Modifications Not Staged For Commit ===");
-        System.out.println("\n=== Untracked Files ===");
+        System.out.println("\n=== Untracked Files ===\n");
+    }
+
+    public static void find(String message) {
+        Commit[] allCommits = listAllCommits();
+        int found = 0;
+        for (int i = 0; i < allCommits.length; i++) {
+            if (allCommits[i].message.equals(message)) {
+                System.out.println(sha1((Object) serialize(allCommits[i])));
+                found++;
+            }
+        }
+        if (found == 0) {
+            throw error("Found no commit with that message.");
+        }
     }
 
 
+    public static void checkout(String commitHash, String filename) throws IOException {
+        if (!Objects.requireNonNull(plainFilenamesIn(COMMITS_DIR)).contains(commitHash)) {
+            throw error("No commit with that id exists.");
+        }
+        Commit targetCommit = readObject(join(COMMITS_DIR, commitHash), Commit.class);
+        String blobHash = targetCommit.fileBlobs.get(filename);
+        if (blobHash == null) {
+            throw error("File does not exist in that commit.");
+        }
+
+        File fileCWD = join(CWD, filename);
+        Blob blob = readObject(join(BLOBS_DIR, blobHash), Blob.class);
+        fileCWD.createNewFile();
+        writeContents(fileCWD, blob.content);
+
+        String stagedHash = config.stagedForAdd.get(filename);
+        if (stagedHash != null) {
+            join(STAGED_DIR, stagedHash).delete();
+            config.stagedForAdd.remove(filename);
+        }
+        config.stagedForRM.remove(filename);
+        saveConfig();
+    }
+
+    public static void checkout(String filename) throws IOException {
+        checkout(sha1((Object) serialize(config.head)), filename);
+    }
+
+    public static void checkout(String branchName, int flag) throws IOException {
+        if (!config.branchHeaders.containsKey(branchName)) {
+            throw error("No such branch exists.");
+        } else if (config.currentBranch.equals(branchName)) {
+            throw error("No need to checkout the current branch.");
+        }
+        config.currentBranch = branchName;
+        Commit targetCommit = config.branchHeaders.get(branchName);
+        reset(sha1((Object) serialize(targetCommit)));
+    }
+
+    private static void clearStaged() throws IOException {
+        config.stagedForAdd.clear();
+        config.stagedForRM.clear();
+        for (String hash : Objects.requireNonNull(plainFilenamesIn(STAGED_DIR))) {
+            join(STAGED_DIR, hash).delete();
+        }
+        saveConfig();
+    }
+
+    public static void reset(String commitHash) throws IOException {
+        if (!plainFilenamesIn(COMMITS_DIR).contains(commitHash)) {
+            throw error("No commit with that id exists.");
+        }
+        
+        Commit targetCommit = readObject(join(COMMITS_DIR, commitHash), Commit.class);
+        config.head = targetCommit;
+
+        String targetHash =  sha1((Object) serialize(targetCommit));
+        for (String fileCWD : plainFilenamesIn(CWD)) {
+            if (!targetCommit.fileBlobs.containsKey(fileCWD)) {
+                join(CWD, fileCWD).delete();
+            } else {
+                checkout(targetHash, fileCWD);
+            }
+        }
+        clearStaged();
+    }
+
+    public static void branch(String branchName) throws IOException {
+        if (config.branchHeaders.containsKey(branchName)) {
+            throw error("A branch with that name already exists.");
+        }
+        config.branchHeaders.put(branchName, config.head);
+        saveConfig();
+    }
+
+    public static void removeBranch(String branchName) throws IOException {
+        if (!config.branchHeaders.containsKey(branchName)) {
+            throw error("A branch with that name does not exists.");
+        } else if (config.currentBranch.equals(branchName)) {
+            throw error("Cannot remove the current branch.");
+        }
+        config.branchHeaders.remove(branchName);
+        saveConfig();
+    }
 }

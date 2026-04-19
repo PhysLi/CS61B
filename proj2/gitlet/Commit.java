@@ -24,7 +24,7 @@ public class Commit implements Serializable {
      */
 
     /** The message of this Commit. */
-    private String message;
+    public String message;
     private long timeStamp;
     public Map<String, String> fileBlobs;
     public String[] parentCommits;
@@ -38,7 +38,7 @@ public class Commit implements Serializable {
 
     public String[] printCommit() {
         System.out.println("===");
-        System.out.println("commit: " + sha1((Object) serialize(this)));
+        System.out.println("commit " + sha1((Object) serialize(this)));
 
         if (parentCommits.length == 2) {
             System.out.println("Merge: " + parentCommits[0].substring(0,8) + " " + parentCommits[1].substring(0,8));
@@ -46,9 +46,8 @@ public class Commit implements Serializable {
 
         System.out.print("Date: ");
         Formatter fmt = new Formatter(System.out);
-        TimeZone.setDefault(TimeZone.getTimeZone("PST"));
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         fmt.format(Locale.US,"%1$ta %1$tb %1$td %1$tT %1$tY %1$tz%n", timeStamp);
-        fmt.close();
 
         System.out.println(message);
         System.out.println();
