@@ -788,7 +788,7 @@ a[1] = new int[2];//不同行的列数可以不同
 ### Traversal
 - Tree的遍历称为tree traversal，有很多可能的顺序
   - level order: 从上到下从左到右
-  - Depth-first
+  - Depth-first search
     - preorder: visit当前节点，递归调用左子节点，递归调用右子节点
     - inorder: 递归调用左子节点，visit当前节点，递归调用右子节点
     - postorder: 递归调用左子节点，递归调用右子节点，visit当前节点
@@ -803,3 +803,39 @@ a[1] = new int[2];//不同行的列数可以不同
     - 称为Depth-first search：因为会先遍历完整个子图，再遍历其它子图
 
 ## Lecture 23: BFS, DFS and implementations
+### Graph API
+- 需要确定graph类的API包括哪些方法，以及用什么数据结构来存储graph。
+- 规定node的lable只能是integer
+- API包括：
+  ```java
+  public class Graph {
+    public Graph(int V);
+    public void addEdge(int v, int w);
+    Iterable<Integer> adj(int v);
+    int V();
+    int E();
+  }
+  ```
+
+### 深度优先搜索(DFS)
+- 实现深度优先搜索：一般会把数据类型和处理算法分开，即在graph类之外创建一个client class，其中包含graph-processing的方法，然后从client class获取信息，如
+```java
+public class Paths {
+  public Path(Graph G, int s);
+  boolean hasPathTo(int v);
+  Iterable<Integer> pathTo(int v);
+}
+```
+- graph的DFS和tree的DFS一样，分为pre-order和post-order（但没有in-order）
+
+### 用来实现graph的数据结构
+- Adjacency matrix：矩阵表示两个节点之间是否存在edge（无向图的矩阵对称，有向图的矩阵非对称）；若节点数很多，则为稀疏矩阵，比较耗费内存
+- Adjacency lists：列表数组，每个位置代表每个节点，存储该节点的相邻节点组成的列表
+
+## The All-Shortest path problem
+- 在tree中存在level-order DFS，在graph中称为广度优先搜索(breadth-first search, BFS)
+  - 访问某个节点的1st Adjacent, 2nd Adjacent,...
+  - 使用queue数据结构来实现BFS
+    - 用起点s来初始化queue并mark其为已访问；
+    - 移除s，并把s的每一个neighbor都加到queue的末尾
+    - 对queue中后续元素重复上述过程

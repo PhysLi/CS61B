@@ -25,7 +25,7 @@ public class Commit implements Serializable {
 
     /** The message of this Commit. */
     public String message;
-    private long timeStamp;
+    public long timeStamp;
     public Map<String, String> fileBlobs;
     public String[] parentCommits;
     /* TODO: fill in the rest of this class. */

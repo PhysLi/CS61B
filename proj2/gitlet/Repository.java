@@ -273,7 +273,7 @@ public class Repository {
         if (!plainFilenamesIn(COMMITS_DIR).contains(commitHash)) {
             throw error("No commit with that id exists.");
         }
-        
+
         Commit targetCommit = readObject(join(COMMITS_DIR, commitHash), Commit.class);
         config.head = targetCommit;
 
@@ -304,5 +304,105 @@ public class Repository {
         }
         config.branchHeaders.remove(branchName);
         saveConfig();
+    }
+
+    private static Commit findSplit(Commit head1, Commit head2) {
+        Commit hold, split, parent;
+        String[] parentCommits;
+        if (head1.timeStamp == head2.timeStamp) {
+            return head1;
+        } else if (head1.parentCommits.length * head2.parentCommits.length == 0) {
+            return null;
+        }
+
+        if (head1.timeStamp > head2.timeStamp) {
+            parentCommits = head1.parentCommits;
+            hold = head2;
+        } else {
+            parentCommits = head2.parentCommits;
+            hold = head1;
+        }
+
+        for (String parentCommit : parentCommits) {
+            parent = readObject(join(COMMITS_DIR, parentCommit), Commit.class);
+            split = findSplit(parent, hold);
+            if (split != null) {
+                return split;
+            }
+        }
+        return null;
+    }
+
+    public static void merge(String branchName) throws IOException {
+        if (!config.stagedForAdd.isEmpty() || !config.stagedForRM.isEmpty()) {
+            throw error("You have uncommitted changes.");
+        } else if (!config.branchHeaders.containsKey(branchName)) {
+            throw error("A branch with that name does not exist.");
+        } else if (branchName.equals(config.currentBranch)) {
+            throw error("Cannot merge a branch with itself.");
+        }
+        Commit head1 = config.branchHeaders.get(config.currentBranch);
+        Commit head2 = config.branchHeaders.get(branchName);
+        Commit split = findSplit(head1, head2);
+        if (split.equals(head2)) {
+            message("Given branch is an ancestor of the current branch.");
+        } else if (split.equals(head1)) {
+            checkout(branchName, 0);
+            message("Current branch fast-forwarded.");
+        }
+
+        String curHash, givHash, splitHash;
+        Set<String> currentFiles = head1.fileBlobs.keySet();
+        Set<String> givenFiles = head2.fileBlobs.keySet();
+        Set<String> splitFiles = split.fileBlobs.keySet();
+
+        for (String filename : currentFiles) {
+            curHash = head1.fileBlobs.get(filename);
+            givHash = head2.fileBlobs.get(filename);
+            splitHash = split.fileBlobs.get(filename);
+            currentFiles.remove(filename);
+            givenFiles.remove(filename);
+            splitFiles.remove(filename);
+
+            if (givHash == null && splitHash == null || givHash != null && givHash.equals(splitHash)) {//case4
+                continue;
+            } else if (curHash.equals(splitHash)) {
+                if (givHash == null) {//case6
+                    remove(filename);
+                } else if (!curHash.equals(givHash)) {//case1
+                    checkout(filename);
+                    add(filename);
+                }
+            } else if (givHash.equals(splitHash)) {//case2
+                continue;
+            } else if (curHash.equals(givHash)) {//case3
+                continue;
+            }
+        }
+        for (String filename : givenFiles) {
+            curHash = head1.fileBlobs.get(filename);
+            givHash = head2.fileBlobs.get(filename);
+            splitHash = split.fileBlobs.get(filename);
+            currentFiles.remove(filename);
+            givenFiles.remove(filename);
+            splitFiles.remove(filename);
+            if (curHash == null && splitHash == null) {//case5
+                checkout(filename);
+                add(filename);
+            } else if (curHash == null && givHash.equals(splitHash)) {//case7
+                continue;
+            }
+        }
+        for (String filename : splitFiles) {
+            curHash = head1.fileBlobs.get(filename);
+            givHash = head2.fileBlobs.get(filename);
+            splitHash = split.fileBlobs.get(filename);
+            currentFiles.remove(filename);
+            givenFiles.remove(filename);
+            splitFiles.remove(filename);
+            if (curHash != null && givHash != null && !splitHash.equals(curHash) && !splitHash.equals(givHash)) {
+
+            }
+        }
     }
 }
