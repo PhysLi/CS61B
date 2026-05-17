@@ -45,9 +45,14 @@ public class Commit implements Serializable {
         }
 
         System.out.print("Date: ");
+//        Formatter fmt = new Formatter(System.out);
+//        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+//        fmt.format(Locale.US,"%1$ta %1$tb %1$td %1$tT %1$tY %1$tz%n", timeStamp);
+
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        cal.setTimeInMillis(timeStamp);
         Formatter fmt = new Formatter(System.out);
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-        fmt.format(Locale.US,"%1$ta %1$tb %1$td %1$tT %1$tY %1$tz%n", timeStamp);
+        fmt.format(Locale.US, "%1$ta %1$tb %1$td %1$tT %1$tY %1$tz%n", cal);
 
         System.out.println(message);
         System.out.println();
