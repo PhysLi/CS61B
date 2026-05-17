@@ -63,7 +63,7 @@ public class Repository {
         STAGED_DIR.mkdir();
 
         config = new RepoConfig();
-        Commit initCommit = commit("initial commit");
+        Commit initCommit = commit("initial commit", null);
         config.branchHeaders.put("master", initCommit);
         saveConfig();
     }
@@ -128,12 +128,17 @@ public class Repository {
         saveConfig();
     }
 
-    public static Commit commit(String message) throws IOException {
+    public static Commit commit(String message, Commit mergeGiven) throws IOException {
         Commit newCommit;
         if (config.head == null) {
             newCommit = new Commit(message, 0, new HashMap<>());
         } else {
-            newCommit = new Commit(message, System.currentTimeMillis(), config.head.fileBlobs, sha1((Object) serialize(config.head)));
+            if (mergeGiven == null) {
+                newCommit = new Commit(message, System.currentTimeMillis(), config.head.fileBlobs, sha1((Object) serialize(config.head)));
+            } else {
+                newCommit = new Commit(message, System.currentTimeMillis(), config.head.fileBlobs, sha1((Object) serialize(config.head)), sha1((Object) serialize(mergeGiven)));
+            }
+
             for (String filename : config.stagedForRM) {
                 newCommit.fileBlobs.remove(filename);
             }
@@ -352,56 +357,48 @@ public class Repository {
         }
 
         String curHash, givHash, splitHash;
-        Set<String> currentFiles = head1.fileBlobs.keySet();
+        Set<String> fullFiles = head1.fileBlobs.keySet();
         Set<String> givenFiles = head2.fileBlobs.keySet();
         Set<String> splitFiles = split.fileBlobs.keySet();
+        fullFiles.addAll(givenFiles);
+        fullFiles.addAll(splitFiles);
 
-        for (String filename : currentFiles) {
+        int confFlag = 0;
+        for (String filename : fullFiles) {
             curHash = head1.fileBlobs.get(filename);
             givHash = head2.fileBlobs.get(filename);
             splitHash = split.fileBlobs.get(filename);
-            currentFiles.remove(filename);
-            givenFiles.remove(filename);
-            splitFiles.remove(filename);
-
-            if (givHash == null && splitHash == null || givHash != null && givHash.equals(splitHash)) {//case4
+            fullFiles.remove(filename);
+            if (curHash != null && givHash == null && splitHash == null) {//case4
                 continue;
-            } else if (curHash.equals(splitHash)) {
-                if (givHash == null) {//case6
-                    remove(filename);
-                } else if (!curHash.equals(givHash)) {//case1
-                    checkout(filename);
-                    add(filename);
-                }
-            } else if (givHash.equals(splitHash)) {//case2
-                continue;
-            } else if (curHash.equals(givHash)) {//case3
-                continue;
-            }
-        }
-        for (String filename : givenFiles) {
-            curHash = head1.fileBlobs.get(filename);
-            givHash = head2.fileBlobs.get(filename);
-            splitHash = split.fileBlobs.get(filename);
-            currentFiles.remove(filename);
-            givenFiles.remove(filename);
-            splitFiles.remove(filename);
-            if (curHash == null && splitHash == null) {//case5
-                checkout(filename);
+            } else if (givHash != null && curHash == null && splitHash == null) {//case5
+                checkout(sha1((Object) serialize(head2)), filename);
                 add(filename);
-            } else if (curHash == null && givHash.equals(splitHash)) {//case7
+            } else if (Objects.equals(splitHash, curHash) && givHash == null) {//case6
+                remove(filename);
+            } else if (Objects.equals(splitHash, givHash) && curHash == null) {//case7
                 continue;
-            }
-        }
-        for (String filename : splitFiles) {
-            curHash = head1.fileBlobs.get(filename);
-            givHash = head2.fileBlobs.get(filename);
-            splitHash = split.fileBlobs.get(filename);
-            currentFiles.remove(filename);
-            givenFiles.remove(filename);
-            splitFiles.remove(filename);
-            if (curHash != null && givHash != null && !splitHash.equals(curHash) && !splitHash.equals(givHash)) {
+            }else  if (Objects.equals(curHash, splitHash) && !Objects.equals(givHash, splitHash)) {//case1
+                checkout(sha1((Object) serialize(head2)), filename);
+                add(filename);
+            } else if (!Objects.equals(curHash, splitHash) && Objects.equals(givHash, splitHash)) {//case2
+                continue;
+            } else if (Objects.equals(curHash, givHash)) {//case3
+                continue;
+            } else {
+                String curContent = readObject(join(BLOBS_DIR, curHash), Blob.class).content;
+                String givContent = readObject(join(BLOBS_DIR, givHash), Blob.class).content;
+                String confContent = "<<<<<<< HEAD\n" + curContent + "=======" + givContent + ">>>>>>>";
 
+                File fileCWD = join(CWD, filename);
+                fileCWD.createNewFile();
+                writeContents(fileCWD, confContent);
+                add(filename);
+                confFlag = 1;
+            }
+            commit("Merge " + branchName + " into " + config.currentBranch + "." ,head2);
+            if (confFlag == 1) {
+                System.out.println("Encountered a merge conflict.");
             }
         }
     }
