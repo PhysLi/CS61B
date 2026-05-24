@@ -1,6 +1,6 @@
 package gitlet;
 
-// TODO: any imports you need here
+
 
 import java.io.Serializable;
 import java.util.*;
@@ -9,14 +9,14 @@ import static gitlet.Utils.serialize;
 import static gitlet.Utils.sha1;
 
 /** Represents a gitlet commit object.
- *  TODO: It's a good idea to give a description here of what else this Class
+ *
  *  does at a high level.
  *
- *  @author TODO
+ *  @author
  */
 public class Commit implements Serializable {
     /**
-     * TODO: add instance variables here.
+     *
      *
      * List all instance variables of the Commit class here with a useful
      * comment above them describing what that variable represents and how that
@@ -24,11 +24,11 @@ public class Commit implements Serializable {
      */
 
     /** The message of this Commit. */
-    public String message;
-    public long timeStamp;
-    public Map<String, String> fileBlobs;
-    public String[] parentCommits;
-    /* TODO: fill in the rest of this class. */
+    private String message;
+    private long timeStamp;
+    private Map<String, String> fileBlobs;
+    private String[] parentCommits;
+    /*  */
     Commit(String message, long timeStamp, Map<String, String> fileBlobs, String... parentCommits) {
         this.message = message;
         this.timeStamp = timeStamp;
@@ -57,6 +57,22 @@ public class Commit implements Serializable {
         System.out.println(message);
         System.out.println();
 
+        return parentCommits;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public long getTimeStamp() {
+        return timeStamp;
+    }
+
+    public Map<String, String> getFileBlobs() {
+        return fileBlobs;
+    }
+
+    public String[] getParentCommits() {
         return parentCommits;
     }
 }
