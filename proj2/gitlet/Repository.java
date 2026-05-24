@@ -92,6 +92,7 @@ public class Repository {
         config = new RepoConfig();
         Commit initCommit = commit("initial commit", null);
         config.getBranchHeaders().put("master", initCommit);
+        config.setHead(initCommit);
         saveConfig();
     }
 
@@ -159,9 +160,11 @@ public class Repository {
 
     public static Commit commit(String message, Commit mergeGiven) throws IOException {
         if (config.getStagedForAdd().isEmpty() && config.getStagedForRM().isEmpty()) {
-            message("No changes added to the commit.");
-            System.exit(0);
-        } else if (message == "") {
+            if (config.getHead() != null) {
+                message("No changes added to the commit.");
+                System.exit(0);
+            }
+        } else if (Objects.equals(message, "")) {
             message("Please enter a commit message.");
             System.exit(0);
         }
@@ -171,10 +174,12 @@ public class Repository {
         if (config.getHead() == null) {
             newCommit = new Commit(message, 0, new HashMap<>());
         } else {
+            Map<String, String> blobs = config.getHead().getFileBlobs();
             if (mergeGiven == null) {
-                newCommit = new Commit(message, currentTime, config.getHead().getFileBlobs(), headHash);
+                newCommit = new Commit(message, currentTime, blobs, headHash);
             } else {
-                newCommit = new Commit(message, currentTime, config.getHead().getFileBlobs(), headHash, sha1((Object) serialize(mergeGiven)));
+                String hashGiv = sha1((Object) serialize(mergeGiven));
+                newCommit = new Commit(message, currentTime, blobs, headHash, hashGiv);
             }
 
             for (String filename : config.getStagedForRM()) {
@@ -439,12 +444,12 @@ public class Repository {
                 add(filename);
             } else if (!splitCur && splitGiv) { //case2
                 continue;
-            } else if (curGiv) {//case3
+            } else if (curGiv) { //case3
                 continue;
             } else {
-                String curContent = readObject(join(BLOBS_DIR, curHash), Blob.class).getContent();
-                String givContent = readObject(join(BLOBS_DIR, givHash), Blob.class).getContent();
-                String confContent = "<<<<<<< HEAD\n" + curContent + "=======" + givContent + ">>>>>>>";
+                String curCon = readObject(join(BLOBS_DIR, curHash), Blob.class).getContent();
+                String givCon = readObject(join(BLOBS_DIR, givHash), Blob.class).getContent();
+                String confContent = "<<<<<<< HEAD\n" + curCon + "=======" + givCon + ">>>>>>>";
 
                 File fileCWD = join(CWD, filename);
                 fileCWD.createNewFile();

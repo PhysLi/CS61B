@@ -41,7 +41,9 @@ public class Commit implements Serializable {
         System.out.println("commit " + sha1((Object) serialize(this)));
 
         if (parentCommits.length == 2) {
-            System.out.println("Merge: " + parentCommits[0].substring(0,8) + " " + parentCommits[1].substring(0,8));
+            String part1 = parentCommits[0].substring(0, 8);
+            String part2 = parentCommits[1].substring(0, 8);
+            System.out.println("Merge: " + part1 + " " + part2);
         }
 
         System.out.print("Date: ");
