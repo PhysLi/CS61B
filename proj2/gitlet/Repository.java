@@ -37,7 +37,7 @@ public class Repository {
     /*  */
 
     private static class RepoConfig implements Serializable {
-        private Map<String, Commit> branchHeaders;
+        private Map<String, String> branchHeaders;
         private Commit head;
         private String currentBranch;
         private Map<String, String> stagedForAdd;
@@ -51,7 +51,7 @@ public class Repository {
             branchHeaders = new HashMap<>();
         }
         
-        public Map<String, Commit> getBranchHeaders() {
+        public Map<String, String> getBranchHeaders() {
             return branchHeaders;
         }
         public Commit getHead() {
@@ -91,7 +91,8 @@ public class Repository {
 
         config = new RepoConfig();
         Commit initCommit = commit("initial commit", null);
-        config.getBranchHeaders().put("master", initCommit);
+        String hashInit = sha1((Object) serialize(initCommit));
+        config.getBranchHeaders().put("master", hashInit);
         config.setHead(initCommit);
         saveConfig();
     }
@@ -201,7 +202,7 @@ public class Repository {
         writeObject(commitFile, newCommit);
 
         config.setHead(newCommit);
-        config.getBranchHeaders().put(config.getCurrentBranch(), newCommit);
+        config.getBranchHeaders().put(config.getCurrentBranch(), hashCommit);
         clearStaged();
         return newCommit;
     }
@@ -310,8 +311,8 @@ public class Repository {
             System.exit(0);
         }
         config.setCurrentBranch(branchName);
-        Commit targetCommit = config.getBranchHeaders().get(branchName);
-        reset(sha1((Object) serialize(targetCommit)));
+        String targetCommitHash = config.getBranchHeaders().get(branchName);
+        reset(targetCommitHash);
     }
 
     private static void clearStaged() throws IOException {
@@ -348,7 +349,8 @@ public class Repository {
             message("A branch with that name already exists.");
             System.exit(0);
         }
-        config.getBranchHeaders().put(branchName, config.getHead());
+        String hashHead = sha1((Object) serialize(config.getHead()));
+        config.getBranchHeaders().put(branchName, hashHead);
         saveConfig();
     }
 
@@ -402,8 +404,10 @@ public class Repository {
             message("Cannot merge a branch with itself.");
             System.exit(0);
         }
-        Commit head1 = config.getBranchHeaders().get(config.getCurrentBranch());
-        Commit head2 = config.getBranchHeaders().get(branchName);
+        String headhash1 = config.getBranchHeaders().get(config.getCurrentBranch());
+        String headhash2 = config.getBranchHeaders().get(branchName);
+        Commit head1 = readObject(join(COMMITS_DIR, headhash1), Commit.class);
+        Commit head2 = readObject(join(COMMITS_DIR, headhash2), Commit.class);
         Commit split = findSplit(head1, head2);
         if (split.equals(head2)) {
             message("Given branch is an ancestor of the current branch.");

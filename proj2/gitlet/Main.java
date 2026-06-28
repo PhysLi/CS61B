@@ -72,7 +72,6 @@ public class Main {
                     Repository.find(args[1]);
                     break;
                 case "checkout":
-                    System.out.println(args.length);
                     switch (args.length) {
                         case 2:
                             Repository.checkout(args[1], 1);
