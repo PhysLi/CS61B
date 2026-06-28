@@ -341,6 +341,14 @@ public class Repository {
                 checkout(targetHash, fileCWD);
             }
         }
+        for (String fileTarget : targetCommit.getFileBlobs().keySet()) {
+            if (!plainFilenamesIn(CWD).contains(fileTarget)) {
+                File fileRestored = join(CWD, fileTarget);
+                Blob fileBlob = readObject(join(BLOBS_DIR, targetCommit.getFileBlobs().get(fileTarget)), Blob.class);
+                writeContents(fileRestored, fileBlob.getContent());
+                fileRestored.createNewFile();
+            }
+        }
         clearStaged();
     }
 
