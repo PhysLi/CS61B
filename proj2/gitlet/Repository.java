@@ -272,21 +272,15 @@ public class Repository {
     }
 
     public static void findCommit(String commitHash) {
-        if (commitHash.length() == 6) {
-            int flag = 0;
-            for (String hash : Objects.requireNonNull(plainFilenamesIn(COMMITS_DIR))) {
-                if (hash.contains(commitHash)) {
-                    commitHash = hash;
-                    flag = 1;
-                    break;
-                }
-            }
-            if (flag == 0) {
-                message("No commit with that id exists.");
-                System.exit(0);
+        int flag = 0;
+        for (String hash : Objects.requireNonNull(plainFilenamesIn(COMMITS_DIR))) {
+            if (hash.contains(commitHash)) {
+                commitHash = hash;
+                flag = 1;
+                break;
             }
         }
-        if (!Objects.requireNonNull(plainFilenamesIn(COMMITS_DIR)).contains(commitHash)) {
+        if (flag == 0) {
             message("No commit with that id exists.");
             System.exit(0);
         }
@@ -343,12 +337,20 @@ public class Repository {
 
     public static void reset(String commitHash) throws IOException {
         findCommit(commitHash);
+        for (String fileCWD : Objects.requireNonNull(plainFilenamesIn(CWD))) {
+            boolean addContain = config.getStagedForAdd().containsKey(fileCWD);
+            boolean commitContain = config.getHead().getFileBlobs().containsKey(fileCWD);
+            if (!addContain && !commitContain) {
+                message("There is an untracked file in the way; delete it, or add and commit it first.");
+                System.exit(0);
+            }
+        }
 
         Commit targetCommit = readObject(join(COMMITS_DIR, commitHash), Commit.class);
         config.setHead(targetCommit);
 
         String targetHash =  sha1((Object) serialize(targetCommit));
-        for (String fileCWD : plainFilenamesIn(CWD)) {
+        for (String fileCWD : Objects.requireNonNull(plainFilenamesIn(CWD))) {
             if (!targetCommit.getFileBlobs().containsKey(fileCWD)) {
                 join(CWD, fileCWD).delete();
             } else {
@@ -356,9 +358,10 @@ public class Repository {
             }
         }
         for (String fileTarget : targetCommit.getFileBlobs().keySet()) {
-            if (!plainFilenamesIn(CWD).contains(fileTarget)) {
+            if (!Objects.requireNonNull(plainFilenamesIn(CWD)).contains(fileTarget)) {
                 File fileRestored = join(CWD, fileTarget);
-                Blob fileBlob = readObject(join(BLOBS_DIR, targetCommit.getFileBlobs().get(fileTarget)), Blob.class);
+                String hashBlob = targetCommit.getFileBlobs().get(fileTarget);
+                Blob fileBlob = readObject(join(BLOBS_DIR, hashBlob), Blob.class);
                 writeContents(fileRestored, fileBlob.getContent());
                 fileRestored.createNewFile();
             }
