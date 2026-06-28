@@ -235,7 +235,10 @@ public class Repository {
 
     public static void status() {
         System.out.println("=== Branches ===");
-        for (String branchName : config.getBranchHeaders().keySet()) {
+        List<String> branches = new ArrayList<>(config.getBranchHeaders().keySet());
+        Collections.sort(branches);
+
+        for (String branchName : branches) {
             if (config.getCurrentBranch().equals(branchName)) {
                 System.out.print("*");
             }
@@ -271,23 +274,20 @@ public class Repository {
         }
     }
 
-    public static void findCommit(String commitHash) {
+    public static String findCommit(String commitHash) {
         int flag = 0;
         for (String hash : Objects.requireNonNull(plainFilenamesIn(COMMITS_DIR))) {
             if (hash.contains(commitHash)) {
-                commitHash = hash;
-                flag = 1;
-                break;
+                return hash;
             }
         }
-        if (flag == 0) {
-            message("No commit with that id exists.");
-            System.exit(0);
-        }
+        message("No commit with that id exists.");
+        System.exit(0);
+        return "";
     }
 
     public static void checkout(String commitHash, String filename) throws IOException {
-        findCommit(commitHash);
+        commitHash = findCommit(commitHash);
         Commit targetCommit = readObject(join(COMMITS_DIR, commitHash), Commit.class);
         String blobHash = targetCommit.getFileBlobs().get(filename);
         if (blobHash == null) {
@@ -336,12 +336,14 @@ public class Repository {
     }
 
     public static void reset(String commitHash) throws IOException {
-        findCommit(commitHash);
+        commitHash = findCommit(commitHash);
         for (String fileCWD : Objects.requireNonNull(plainFilenamesIn(CWD))) {
             boolean addContain = config.getStagedForAdd().containsKey(fileCWD);
             boolean commitContain = config.getHead().getFileBlobs().containsKey(fileCWD);
             if (!addContain && !commitContain) {
-                message("There is an untracked file in the way; delete it, or add and commit it first.");
+                String s1 = "There is an untracked file in the way; ";
+                String s2 = "delete it, or add and commit it first.";
+                message(s1 + s2);
                 System.exit(0);
             }
         }
@@ -429,6 +431,7 @@ public class Repository {
             message("Cannot merge a branch with itself.");
             System.exit(0);
         }
+
         String headhash1 = config.getBranchHeaders().get(config.getCurrentBranch());
         String headhash2 = config.getBranchHeaders().get(branchName);
         Commit head1 = readObject(join(COMMITS_DIR, headhash1), Commit.class);
@@ -438,13 +441,31 @@ public class Repository {
             message("Given branch is an ancestor of the current branch.");
             System.exit(0);
         }
+        for (String filename : plainFilenamesIn(CWD)) {
+            boolean untracked =
+                    !head1.getFileBlobs().containsKey(filename)
+                            && !config.getStagedForAdd().containsKey(filename);
+
+            boolean wouldBeWrittenByMerge =
+                    head2.getFileBlobs().containsKey(filename);
+
+            if (untracked && wouldBeWrittenByMerge) {
+                String s1 = "There is an untracked file in the way; ";
+                String s2 = "delete it, or add and commit it first.";
+                message(s1 + s2);
+                System.exit(0);
+            }
+        }
 
         String curHash, givHash, splitHash;
-        Set<String> fullFiles = head1.getFileBlobs().keySet();
+
         Set<String> givenFiles = head2.getFileBlobs().keySet();
         Set<String> splitFiles = split.getFileBlobs().keySet();
-        fullFiles.addAll(givenFiles);
-        fullFiles.addAll(splitFiles);
+
+        Set<String> fullFiles = new HashSet<>();
+        fullFiles.addAll(head1.getFileBlobs().keySet());
+        fullFiles.addAll(head2.getFileBlobs().keySet());
+        fullFiles.addAll(split.getFileBlobs().keySet());
 
         int confFlag = 0;
         for (String filename : fullFiles) {
@@ -459,23 +480,30 @@ public class Repository {
             if (curHash != null && givHash == null && splitHash == null) { //case4
                 continue;
             } else if (givHash != null && curHash == null && splitHash == null) { //case5
-                checkout(sha1((Object) serialize(head2)), filename);
+                checkout(headhash2, filename);
                 add(filename);
             } else if (splitCur && givHash == null) { //case6
                 remove(filename);
             } else if (splitGiv && curHash == null) { //case7
                 continue;
             } else  if (splitCur && !splitGiv) { //case1
-                checkout(sha1((Object) serialize(head2)), filename);
+                checkout(headhash2, filename);
                 add(filename);
             } else if (!splitCur && splitGiv) { //case2
                 continue;
             } else if (curGiv) { //case3
                 continue;
             } else {
-                String curCon = readObject(join(BLOBS_DIR, curHash), Blob.class).getContent();
-                String givCon = readObject(join(BLOBS_DIR, givHash), Blob.class).getContent();
-                String confContent = "<<<<<<< HEAD\n" + curCon + "=======" + givCon + ">>>>>>>";
+                String curCon = "";
+                if (curHash != null) {
+                    curCon = readObject(join(BLOBS_DIR, curHash), Blob.class).getContent();
+                }
+
+                String givCon = "";
+                if (givHash != null) {
+                    givCon = readObject(join(BLOBS_DIR, givHash), Blob.class).getContent();
+                }
+                String confContent = "<<<<<<< HEAD\n" + curCon + "\n=======\n" + givCon + "\n>>>>>>>";
 
                 File fileCWD = join(CWD, filename);
                 fileCWD.createNewFile();
@@ -483,10 +511,10 @@ public class Repository {
                 add(filename);
                 confFlag = 1;
             }
-            commit("Merge " + branchName + " into " + config.getCurrentBranch() + ".", head2);
-            if (confFlag == 1) {
-                System.out.println("Encountered a merge conflict.");
-            }
+            commit("Merged " + branchName + " into " + config.getCurrentBranch() + ".", head2);
+        }
+        if (confFlag == 1) {
+            System.out.println("Encountered a merge conflict.");
         }
     }
 }
