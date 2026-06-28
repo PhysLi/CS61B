@@ -271,12 +271,29 @@ public class Repository {
         }
     }
 
-
-    public static void checkout(String commitHash, String filename) throws IOException {
+    public static void findCommit(String commitHash) {
+        if (commitHash.length() == 6) {
+            int flag = 0;
+            for (String hash : Objects.requireNonNull(plainFilenamesIn(COMMITS_DIR))) {
+                if (hash.contains(commitHash)) {
+                    commitHash = hash;
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 0) {
+                message("No commit with that id exists.");
+                System.exit(0);
+            }
+        }
         if (!Objects.requireNonNull(plainFilenamesIn(COMMITS_DIR)).contains(commitHash)) {
             message("No commit with that id exists.");
             System.exit(0);
         }
+    }
+
+    public static void checkout(String commitHash, String filename) throws IOException {
+        findCommit(commitHash);
         Commit targetCommit = readObject(join(COMMITS_DIR, commitHash), Commit.class);
         String blobHash = targetCommit.getFileBlobs().get(filename);
         if (blobHash == null) {
@@ -325,10 +342,7 @@ public class Repository {
     }
 
     public static void reset(String commitHash) throws IOException {
-        if (!plainFilenamesIn(COMMITS_DIR).contains(commitHash)) {
-            message("No commit with that id exists.");
-            System.exit(0);
-        }
+        findCommit(commitHash);
 
         Commit targetCommit = readObject(join(COMMITS_DIR, commitHash), Commit.class);
         config.setHead(targetCommit);
@@ -417,12 +431,8 @@ public class Repository {
         Commit head1 = readObject(join(COMMITS_DIR, headhash1), Commit.class);
         Commit head2 = readObject(join(COMMITS_DIR, headhash2), Commit.class);
         Commit split = findSplit(head1, head2);
-        if (split.equals(head2)) {
+        if (split != null && split.equals(head2)) {
             message("Given branch is an ancestor of the current branch.");
-            System.exit(0);
-        } else if (split.equals(head1)) {
-            checkout(branchName, 0);
-            message("Current branch fast-forwarded.");
             System.exit(0);
         }
 
