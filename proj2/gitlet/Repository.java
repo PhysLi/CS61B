@@ -129,6 +129,7 @@ public class Repository {
             stagedBlob.createNewFile();
             config.getStagedForAdd().put(fileName, hash);
         }
+        config.getStagedForRM().remove(fileName);
 
         saveConfig();
     }
